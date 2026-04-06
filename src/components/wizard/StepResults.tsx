@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WizardState, WizardAction, SearchResult } from '@/lib/types';
-import { useSearchProgress } from '@/hooks/useSearchProgress';
 import { formatCurrency, formatDateRange } from '@/lib/utils';
 
 function useElapsedTime(running: boolean) {
@@ -46,18 +45,22 @@ export default function StepResults({ state, dispatch }: Props) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<'idle' | 'creating' | 'searching' | 'complete' | 'error'>('idle');
   const [tipIndex, setTipIndex] = useState(0);
-  const { progress, status, percentage, startPolling } = useSearchProgress(state.tripId);
-  const isSearching = creating || (status === 'searching') || (status === 'idle' && !!state.tripId);
+  const [progressInfo, setProgressInfo] = useState({ completed: 0, total: 0, currentTask: '' });
+  const isSearching = searchStatus === 'creating' || searchStatus === 'searching';
   const { formatted: elapsedTime } = useElapsedTime(isSearching);
+  const searchStartedRef = useRef(false);
 
-  const startSearch = useCallback(async () => {
-    setCreating(true);
+  const runSearch = useCallback(async () => {
+    if (searchStartedRef.current) return;
+    searchStartedRef.current = true;
+
+    setSearchStatus('creating');
     setError(null);
 
     try {
-      // Create trip in DB
+      // Step 1: Create trip in DB
       const tripRes = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -77,31 +80,52 @@ export default function StepResults({ state, dispatch }: Props) {
       const { tripId } = await tripRes.json();
       dispatch({ type: 'SET_TRIP_ID', tripId });
 
-      // Start search
-      const searchRes = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tripId }),
-      });
+      // Step 2: Process scenarios one by one from the client
+      setSearchStatus('searching');
+      let nextIndex = 0;
+      let done = false;
 
-      if (!searchRes.ok) {
+      while (!done) {
+        const searchRes = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tripId, scenarioIndex: nextIndex }),
+        });
+
+        if (!searchRes.ok) {
+          const data = await searchRes.json();
+          throw new Error(data.error || 'Search failed');
+        }
+
         const data = await searchRes.json();
-        throw new Error(data.error || 'Failed to start search');
+        done = data.done;
+
+        if (!done) {
+          nextIndex = data.nextIndex;
+          setProgressInfo({
+            completed: data.nextIndex,
+            total: data.totalScenarios,
+            currentTask: data.scenarioResult?.cityLabel || '',
+          });
+        } else {
+          setProgressInfo((prev) => ({ ...prev, completed: data.totalScenarios, total: data.totalScenarios }));
+        }
       }
 
-      startPolling();
+      // Step 3: Fetch final results
+      const resultsRes = await fetch(`/api/results?tripId=${tripId}`);
+      const resultsData = await resultsRes.json();
+      setResults(resultsData.results || []);
+      setSearchStatus('complete');
     } catch (err) {
       setError((err as Error).message);
-    } finally {
-      setCreating(false);
+      setSearchStatus('error');
     }
-  }, [state, dispatch, startPolling]);
+  }, [state, dispatch]);
 
   // Auto-start on mount
   useEffect(() => {
-    if (!state.tripId && !creating) {
-      startSearch();
-    }
+    runSearch();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Rotate tips every 5 seconds
@@ -113,17 +137,11 @@ export default function StepResults({ state, dispatch }: Props) {
     return () => clearInterval(interval);
   }, [isSearching]);
 
-  // Fetch results when complete
-  useEffect(() => {
-    if (status === 'complete' && state.tripId) {
-      fetch(`/api/results?tripId=${state.tripId}`)
-        .then((r) => r.json())
-        .then((data) => setResults(data.results || []))
-        .catch(() => setError('Failed to load results'));
-    }
-  }, [status, state.tripId]);
+  const percentage = progressInfo.total > 0
+    ? Math.round((progressInfo.completed / progressInfo.total) * 100)
+    : 0;
 
-  if (error) {
+  if (searchStatus === 'error') {
     return (
       <div className="space-y-4">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
@@ -131,8 +149,9 @@ export default function StepResults({ state, dispatch }: Props) {
           <button
             onClick={() => {
               setError(null);
+              searchStartedRef.current = false;
               dispatch({ type: 'SET_TRIP_ID', tripId: null });
-              startSearch();
+              runSearch();
             }}
             className="mt-4 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm"
           >
@@ -143,10 +162,10 @@ export default function StepResults({ state, dispatch }: Props) {
     );
   }
 
-  if (status !== 'complete') {
+  if (searchStatus !== 'complete') {
     const totalScenarios = state.selectedCities.length * state.dateRanges.length;
-    const apiCallsPerScenario = 1 + state.travelers.length; // 1 hotel + N flights
-    const estSeconds = totalScenarios * apiCallsPerScenario * 1.5; // ~1.5s per call
+    const apiCallsPerScenario = 1 + state.travelers.length;
+    const estSeconds = totalScenarios * apiCallsPerScenario * 2;
     const estMins = Math.ceil(estSeconds / 60);
 
     return (
@@ -157,12 +176,12 @@ export default function StepResults({ state, dispatch }: Props) {
             <div className="absolute inset-0 rounded-full border-4 border-gray-200 dark:border-gray-700" />
             <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl">{creating ? '📋' : '✈️'}</span>
+              <span className="text-2xl">{searchStatus === 'creating' ? '📋' : '✈️'}</span>
             </div>
           </div>
 
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-            {creating ? 'Setting up your search...' : 'Searching for the best deals...'}
+            {searchStatus === 'creating' ? 'Setting up your search...' : 'Searching for the best deals...'}
           </h2>
 
           {/* Elapsed timer */}
@@ -171,7 +190,7 @@ export default function StepResults({ state, dispatch }: Props) {
           </div>
 
           {/* Progress bar */}
-          {progress && progress.total_tasks > 0 && (
+          {progressInfo.total > 0 && (
             <div className="w-full max-w-md mx-auto">
               <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                 <div
@@ -181,7 +200,7 @@ export default function StepResults({ state, dispatch }: Props) {
               </div>
               <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
                 <span>
-                  {progress.completed_tasks} of {progress.total_tasks} scenarios
+                  {progressInfo.completed} of {progressInfo.total} scenarios
                 </span>
                 <span>{percentage}%</span>
               </div>
@@ -189,21 +208,21 @@ export default function StepResults({ state, dispatch }: Props) {
           )}
 
           {/* Current task */}
-          {progress?.current_task && (
+          {progressInfo.currentTask && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-              {progress.current_task}
+              Just checked: {progressInfo.currentTask}
             </p>
           )}
 
           {/* Rotating tips */}
-          {!creating && (
+          {searchStatus === 'searching' && (
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-4 italic transition-opacity duration-500">
               {SEARCH_TIPS[tipIndex]}
             </p>
           )}
 
           {/* Estimate */}
-          {!progress && !creating && (
+          {progressInfo.total === 0 && searchStatus === 'searching' && (
             <p className="text-xs text-gray-400 dark:text-gray-600 mt-4">
               Estimated time: ~{estMins} minute{estMins !== 1 ? 's' : ''} for {totalScenarios} scenario{totalScenarios !== 1 ? 's' : ''}
             </p>
