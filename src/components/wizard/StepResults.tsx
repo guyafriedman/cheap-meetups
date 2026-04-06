@@ -1,9 +1,41 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WizardState, WizardAction, SearchResult } from '@/lib/types';
 import { useSearchProgress } from '@/hooks/useSearchProgress';
 import { formatCurrency, formatDateRange } from '@/lib/utils';
+
+function useElapsedTime(running: boolean) {
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (running) {
+      startRef.current = Date.now();
+      setElapsed(0);
+      const interval = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - startRef.current!) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [running]);
+
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const formatted = mins > 0
+    ? `${mins}:${secs.toString().padStart(2, '0')}`
+    : `${secs}s`;
+
+  return { elapsed, formatted };
+}
+
+const SEARCH_TIPS = [
+  'Comparing flight prices across airlines...',
+  'Checking hotel availability downtown...',
+  'Finding the best round-trip fares...',
+  'Scanning for deals on your dates...',
+  'Crunching the numbers for your group...',
+];
 
 interface Props {
   state: WizardState;
@@ -15,7 +47,10 @@ export default function StepResults({ state, dispatch }: Props) {
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [tipIndex, setTipIndex] = useState(0);
   const { progress, status, percentage, startPolling } = useSearchProgress(state.tripId);
+  const isSearching = creating || (status === 'searching') || (status === 'idle' && !!state.tripId);
+  const { formatted: elapsedTime } = useElapsedTime(isSearching);
 
   const startSearch = useCallback(async () => {
     setCreating(true);
@@ -69,6 +104,15 @@ export default function StepResults({ state, dispatch }: Props) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Rotate tips every 5 seconds
+  useEffect(() => {
+    if (!isSearching) return;
+    const interval = setInterval(() => {
+      setTipIndex((i) => (i + 1) % SEARCH_TIPS.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isSearching]);
+
   // Fetch results when complete
   useEffect(() => {
     if (status === 'complete' && state.tripId) {
@@ -100,33 +144,69 @@ export default function StepResults({ state, dispatch }: Props) {
   }
 
   if (status !== 'complete') {
+    const totalScenarios = state.selectedCities.length * state.dateRanges.length;
+    const apiCallsPerScenario = 1 + state.travelers.length; // 1 hotel + N flights
+    const estSeconds = totalScenarios * apiCallsPerScenario * 1.5; // ~1.5s per call
+    const estMins = Math.ceil(estSeconds / 60);
+
     return (
       <div className="space-y-6">
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
-          <div className="text-4xl mb-4">
-            {creating ? '📋' : '✈️'}
+          {/* Animated spinner */}
+          <div className="relative w-20 h-20 mx-auto mb-5">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-200 dark:border-gray-700" />
+            <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl">{creating ? '📋' : '✈️'}</span>
+            </div>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
             {creating ? 'Setting up your search...' : 'Searching for the best deals...'}
           </h2>
-          {progress && (
-            <>
-              <div className="w-full max-w-md mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-4">
+
+          {/* Elapsed timer */}
+          <div className="text-3xl font-mono font-bold text-blue-600 dark:text-blue-400 my-3">
+            {elapsedTime}
+          </div>
+
+          {/* Progress bar */}
+          {progress && progress.total_tasks > 0 && (
+            <div className="w-full max-w-md mx-auto">
+              <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                 <div
-                  className="bg-blue-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${percentage}%` }}
+                  className="bg-blue-600 h-3 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${Math.max(percentage, 2)}%` }}
                 />
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-                {progress.completed_tasks} of {progress.total_tasks} scenarios checked
-                ({percentage}%)
-              </p>
-              {progress.current_task && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                  {progress.current_task}
-                </p>
-              )}
-            </>
+              <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
+                <span>
+                  {progress.completed_tasks} of {progress.total_tasks} scenarios
+                </span>
+                <span>{percentage}%</span>
+              </div>
+            </div>
+          )}
+
+          {/* Current task */}
+          {progress?.current_task && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+              {progress.current_task}
+            </p>
+          )}
+
+          {/* Rotating tips */}
+          {!creating && (
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-4 italic transition-opacity duration-500">
+              {SEARCH_TIPS[tipIndex]}
+            </p>
+          )}
+
+          {/* Estimate */}
+          {!progress && !creating && (
+            <p className="text-xs text-gray-400 dark:text-gray-600 mt-4">
+              Estimated time: ~{estMins} minute{estMins !== 1 ? 's' : ''} for {totalScenarios} scenario{totalScenarios !== 1 ? 's' : ''}
+            </p>
           )}
         </div>
       </div>
