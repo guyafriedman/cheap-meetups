@@ -63,6 +63,7 @@ export interface FlightQuote {
   return_date: string;
   price: number | null;
   airline: string | null;
+  stops?: number | null;
 }
 
 export interface SearchProgress {
@@ -70,6 +71,12 @@ export interface SearchProgress {
   total_tasks: number;
   completed_tasks: number;
   current_task: string;
+}
+
+export interface FlightPreferences {
+  arriveBy: string; // HH:MM or '' for no preference
+  leaveBy: string;  // HH:MM or '' for no preference
+  directOnly: boolean;
 }
 
 export interface WizardState {
@@ -80,6 +87,7 @@ export interface WizardState {
   dateRanges: DateRange[];
   freehandText: string;
   tripId: string | null;
+  flightPreferences: FlightPreferences;
 }
 
 export type WizardAction =
@@ -94,4 +102,5 @@ export type WizardAction =
   | { type: 'ADD_DATE_RANGE'; range: DateRange }
   | { type: 'REMOVE_DATE_RANGE'; index: number }
   | { type: 'SET_FREEHAND_TEXT'; text: string }
-  | { type: 'SET_TRIP_ID'; tripId: string | null };
+  | { type: 'SET_TRIP_ID'; tripId: string | null }
+  | { type: 'SET_FLIGHT_PREFERENCES'; preferences: Partial<FlightPreferences> };

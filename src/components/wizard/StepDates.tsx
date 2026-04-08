@@ -55,7 +55,6 @@ export default function StepDates({ state, dispatch }: Props) {
         source: 'freehand' as const,
       }));
 
-      // Deduplicate with existing ranges
       const existing = new Set(
         state.dateRanges.map((d) => `${d.check_in}|${d.check_out}`)
       );
@@ -76,6 +75,8 @@ export default function StepDates({ state, dispatch }: Props) {
 
   const estimatedScenarios = state.dateRanges.length *
     (state.selectedCities?.length || 0);
+
+  const { flightPreferences } = state;
 
   return (
     <div className="space-y-6 pb-24">
@@ -150,6 +151,89 @@ export default function StepDates({ state, dispatch }: Props) {
           {parseError && (
             <p className="text-red-500 text-sm mt-2">{parseError}</p>
           )}
+        </div>
+      </div>
+
+      {/* Flight Preferences */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+        <h3 className="font-medium text-gray-900 dark:text-white mb-4">
+          Flight Preferences
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Arrive by */}
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              Arrive by (outbound)
+            </label>
+            <input
+              type="time"
+              value={flightPreferences.arriveBy}
+              onChange={(e) =>
+                dispatch({
+                  type: 'SET_FLIGHT_PREFERENCES',
+                  preferences: { arriveBy: e.target.value },
+                })
+              }
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {flightPreferences.arriveBy ? `Land by ${flightPreferences.arriveBy}` : 'No preference'}
+            </p>
+          </div>
+
+          {/* Leave by */}
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              Depart after (return)
+            </label>
+            <input
+              type="time"
+              value={flightPreferences.leaveBy}
+              onChange={(e) =>
+                dispatch({
+                  type: 'SET_FLIGHT_PREFERENCES',
+                  preferences: { leaveBy: e.target.value },
+                })
+              }
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {flightPreferences.leaveBy ? `Depart after ${flightPreferences.leaveBy}` : 'No preference'}
+            </p>
+          </div>
+
+          {/* Direct flights */}
+          <div className="flex flex-col justify-center">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  flightPreferences.directOnly
+                    ? 'bg-blue-600'
+                    : 'bg-gray-300 dark:bg-gray-700'
+                }`}
+                onClick={() =>
+                  dispatch({
+                    type: 'SET_FLIGHT_PREFERENCES',
+                    preferences: { directOnly: !flightPreferences.directOnly },
+                  })
+                }
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    flightPreferences.directOnly ? 'translate-x-6' : 'translate-x-0.5'
+                  }`}
+                />
+              </div>
+              <span className="text-sm text-gray-900 dark:text-white font-medium">
+                Direct flights only
+              </span>
+            </label>
+            <p className="text-xs text-gray-400 mt-1">
+              {flightPreferences.directOnly
+                ? 'Prefers direct; falls back to fewest stops'
+                : 'Any number of connections'}
+            </p>
+          </div>
         </div>
       </div>
 

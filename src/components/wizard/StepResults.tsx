@@ -89,7 +89,7 @@ export default function StepResults({ state, dispatch }: Props) {
         const searchRes = await fetch('/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tripId, scenarioIndex: nextIndex }),
+          body: JSON.stringify({ tripId, scenarioIndex: nextIndex, flightPreferences: state.flightPreferences }),
         });
 
         if (!searchRes.ok) {

@@ -11,6 +11,11 @@ const initialState: WizardState = {
   dateRanges: [],
   freehandText: '',
   tripId: null,
+  flightPreferences: {
+    arriveBy: '',
+    leaveBy: '',
+    directOnly: false,
+  },
 };
 
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
@@ -61,6 +66,11 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, freehandText: action.text };
     case 'SET_TRIP_ID':
       return { ...state, tripId: action.tripId };
+    case 'SET_FLIGHT_PREFERENCES':
+      return {
+        ...state,
+        flightPreferences: { ...state.flightPreferences, ...action.preferences },
+      };
     default:
       return state;
   }

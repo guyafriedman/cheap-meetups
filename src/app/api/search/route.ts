@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { fetchFlightPrice } from '@/lib/serpapi/flights';
+import { fetchFlightPrice, FlightSearchOptions } from '@/lib/serpapi/flights';
 import { fetchHotelPrice } from '@/lib/serpapi/hotels';
 import { nightsBetween } from '@/lib/utils';
 import pMap from 'p-map';
@@ -15,7 +15,12 @@ interface TravelerRow {
 
 export async function POST(request: Request) {
   try {
-    const { tripId, scenarioIndex } = await request.json();
+    const { tripId, scenarioIndex, flightPreferences } = await request.json();
+    const flightOptions: FlightSearchOptions = {
+      directOnly: flightPreferences?.directOnly || false,
+      arriveBy: flightPreferences?.arriveBy || '',
+      leaveBy: flightPreferences?.leaveBy || '',
+    };
 
     if (!tripId) {
       return NextResponse.json({ error: 'Missing tripId' }, { status: 400 });
@@ -130,7 +135,8 @@ export async function POST(request: Request) {
             traveler.home_airport,
             destAirport,
             dateRange.check_in,
-            dateRange.check_out
+            dateRange.check_out,
+            flightOptions
           );
 
           if (result && (!bestFlight || result.price < bestFlight.price)) {
