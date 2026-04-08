@@ -165,8 +165,7 @@ export default function StepDates({ state, dispatch }: Props) {
             <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
               Arrive by (outbound)
             </label>
-            <input
-              type="time"
+            <select
               value={flightPreferences.arriveBy}
               onChange={(e) =>
                 dispatch({
@@ -174,10 +173,27 @@ export default function StepDates({ state, dispatch }: Props) {
                   preferences: { arriveBy: e.target.value },
                 })
               }
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            />
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white appearance-none"
+            >
+              <option value="">No preference</option>
+              <option value="08:00">8:00 AM</option>
+              <option value="09:00">9:00 AM</option>
+              <option value="10:00">10:00 AM</option>
+              <option value="11:00">11:00 AM</option>
+              <option value="12:00">12:00 PM</option>
+              <option value="13:00">1:00 PM</option>
+              <option value="14:00">2:00 PM</option>
+              <option value="15:00">3:00 PM</option>
+              <option value="16:00">4:00 PM</option>
+              <option value="17:00">5:00 PM</option>
+              <option value="18:00">6:00 PM</option>
+              <option value="19:00">7:00 PM</option>
+              <option value="20:00">8:00 PM</option>
+              <option value="21:00">9:00 PM</option>
+              <option value="22:00">10:00 PM</option>
+            </select>
             <p className="text-xs text-gray-400 mt-1">
-              {flightPreferences.arriveBy ? `Land by ${flightPreferences.arriveBy}` : 'No preference'}
+              {flightPreferences.arriveBy ? `Land by ${flightPreferences.arriveBy}` : 'Any arrival time'}
             </p>
           </div>
 
@@ -186,8 +202,7 @@ export default function StepDates({ state, dispatch }: Props) {
             <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
               Depart after (return)
             </label>
-            <input
-              type="time"
+            <select
               value={flightPreferences.leaveBy}
               onChange={(e) =>
                 dispatch({
@@ -195,10 +210,27 @@ export default function StepDates({ state, dispatch }: Props) {
                   preferences: { leaveBy: e.target.value },
                 })
               }
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            />
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white appearance-none"
+            >
+              <option value="">No preference</option>
+              <option value="08:00">8:00 AM</option>
+              <option value="09:00">9:00 AM</option>
+              <option value="10:00">10:00 AM</option>
+              <option value="11:00">11:00 AM</option>
+              <option value="12:00">12:00 PM</option>
+              <option value="13:00">1:00 PM</option>
+              <option value="14:00">2:00 PM</option>
+              <option value="15:00">3:00 PM</option>
+              <option value="16:00">4:00 PM</option>
+              <option value="17:00">5:00 PM</option>
+              <option value="18:00">6:00 PM</option>
+              <option value="19:00">7:00 PM</option>
+              <option value="20:00">8:00 PM</option>
+              <option value="21:00">9:00 PM</option>
+              <option value="22:00">10:00 PM</option>
+            </select>
             <p className="text-xs text-gray-400 mt-1">
-              {flightPreferences.leaveBy ? `Depart after ${flightPreferences.leaveBy}` : 'No preference'}
+              {flightPreferences.leaveBy ? `Depart after ${flightPreferences.leaveBy}` : 'Any departure time'}
             </p>
           </div>
 
