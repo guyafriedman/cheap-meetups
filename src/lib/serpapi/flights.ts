@@ -2,6 +2,7 @@ export interface FlightResult {
   price: number;
   airline: string;
   stops: number;
+  booking_url: string | null;
 }
 
 export interface FlightSearchOptions {
@@ -22,6 +23,8 @@ interface SerpFlight {
   layovers?: unknown[];
   airline?: string;
   total_duration?: number;
+  booking_token?: string;
+  departure_token?: string;
 }
 
 function getStopCount(flight: SerpFlight): number {
@@ -169,5 +172,8 @@ export async function fetchFlightPrice(
   const airline = best.flights?.[0]?.airline || best.airline || 'Unknown';
   const stops = getStopCount(best);
 
-  return { price: best.price, airline, stops };
+  // Build Google Flights booking URL
+  const booking_url = `https://www.google.com/travel/flights?q=flights+from+${departureId}+to+${arrivalId}+on+${outboundDate}+return+${returnDate}`;
+
+  return { price: best.price, airline, stops, booking_url };
 }

@@ -44,7 +44,7 @@ export default function StepUpload({ state, dispatch }: Props) {
   const addEmptyTraveler = () => {
     dispatch({
       type: 'ADD_TRAVELER',
-      traveler: { name: '', address: '', home_airport: '' },
+      traveler: { name: '', email: '', address: '', home_airport: '' },
     });
   };
 
@@ -60,7 +60,7 @@ export default function StepUpload({ state, dispatch }: Props) {
           Upload Travelers
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Upload a CSV or Excel file with columns: Name, Address, Airport (IATA code).
+          Upload a CSV or Excel file with columns: Name, Email, Address, Airport (IATA code).
           Or add travelers manually below.
         </p>
       </div>
@@ -126,7 +126,7 @@ export default function StepUpload({ state, dispatch }: Props) {
                     Name
                   </th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Address
+                    Email
                   </th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 w-28">
                     Airport
@@ -151,10 +151,10 @@ export default function StepUpload({ state, dispatch }: Props) {
                     </td>
                     <td className="px-4 py-2">
                       <input
-                        type="text"
-                        value={t.address}
-                        onChange={(e) => updateField(i, 'address', e.target.value)}
-                        placeholder="Address (optional)"
+                        type="email"
+                        value={t.email}
+                        onChange={(e) => updateField(i, 'email', e.target.value)}
+                        placeholder="email@example.com"
                         className="w-full bg-transparent border-0 focus:ring-1 focus:ring-blue-500 rounded px-2 py-1 text-gray-900 dark:text-white"
                       />
                     </td>

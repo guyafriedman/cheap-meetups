@@ -128,7 +128,7 @@ export async function POST(request: Request) {
           };
         }
 
-        let bestFlight: { price: number; airline: string; airport: string } | null = null;
+        let bestFlight: { price: number; airline: string; airport: string; booking_url: string | null } | null = null;
 
         for (const destAirport of city.airports) {
           const result = await fetchFlightPrice(
@@ -151,6 +151,7 @@ export async function POST(request: Request) {
           arrival_airport: bestFlight?.airport || city.airports[0],
           price: bestFlight?.price ?? null,
           airline: bestFlight?.airline ?? null,
+          booking_url: bestFlight?.booking_url ?? null,
         };
       },
       { concurrency: 3 }
@@ -177,6 +178,7 @@ export async function POST(request: Request) {
         check_out: dateRange.check_out,
         hotel_cost_per_night: hotel?.pricePerNight ?? null,
         hotel_name: hotel?.hotelName ?? null,
+        hotel_booking_url: hotel?.bookingUrl ?? null,
         hotel_total: hotelTotal,
         total_flight_cost: totalFlightCost,
         total_cost: totalCost,
@@ -195,6 +197,7 @@ export async function POST(request: Request) {
           return_date: dateRange.check_out,
           price: f.price,
           airline: f.airline,
+          booking_url: f.booking_url,
         }))
       );
     }

@@ -26,25 +26,27 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Get flight quotes for each result
+  // Get flight quotes for each result with traveler name AND email
   const resultIds = (results || []).map((r) => r.id);
 
   const { data: flightQuotes } = await supabase
     .from('flight_quotes')
-    .select('*, travelers!inner(name)')
+    .select('*, travelers!inner(name, email)')
     .in('search_result_id', resultIds.length > 0 ? resultIds : ['none']);
 
-  // Attach flight quotes and traveler names to results
+  // Attach flight quotes with traveler info to results
   const enriched = (results || []).map((r) => ({
     ...r,
     flight_quotes: (flightQuotes || [])
       .filter((fq) => fq.search_result_id === r.id)
-      .map((fq) => ({
-        ...fq,
-        traveler_name: (fq as Record<string, unknown>).travelers
-          ? ((fq as Record<string, unknown>).travelers as { name: string }).name
-          : undefined,
-      })),
+      .map((fq) => {
+        const travelers = (fq as Record<string, unknown>).travelers as { name: string; email: string } | undefined;
+        return {
+          ...fq,
+          traveler_name: travelers?.name,
+          traveler_email: travelers?.email,
+        };
+      }),
   }));
 
   // Also include results with null total_cost at the end
@@ -58,12 +60,14 @@ export async function GET(request: Request) {
     ...r,
     flight_quotes: (flightQuotes || [])
       .filter((fq) => fq.search_result_id === r.id)
-      .map((fq) => ({
-        ...fq,
-        traveler_name: (fq as Record<string, unknown>).travelers
-          ? ((fq as Record<string, unknown>).travelers as { name: string }).name
-          : undefined,
-      })),
+      .map((fq) => {
+        const travelers = (fq as Record<string, unknown>).travelers as { name: string; email: string } | undefined;
+        return {
+          ...fq,
+          traveler_name: travelers?.name,
+          traveler_email: travelers?.email,
+        };
+      }),
   }));
 
   return NextResponse.json({ results: [...enriched, ...nullEnriched] });

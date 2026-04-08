@@ -48,6 +48,8 @@ export default function StepResults({ state, dispatch }: Props) {
   const [searchStatus, setSearchStatus] = useState<'idle' | 'creating' | 'searching' | 'complete' | 'error'>('idle');
   const [tipIndex, setTipIndex] = useState(0);
   const [progressInfo, setProgressInfo] = useState({ completed: 0, total: 0, currentTask: '' });
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState<string | null>(null);
   const isSearching = searchStatus === 'creating' || searchStatus === 'searching';
   const { formatted: elapsedTime } = useElapsedTime(isSearching);
   const searchStartedRef = useRef(false);
@@ -60,7 +62,6 @@ export default function StepResults({ state, dispatch }: Props) {
     setError(null);
 
     try {
-      // Step 1: Create trip in DB
       const tripRes = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,7 +81,6 @@ export default function StepResults({ state, dispatch }: Props) {
       const { tripId } = await tripRes.json();
       dispatch({ type: 'SET_TRIP_ID', tripId });
 
-      // Step 2: Process scenarios one by one from the client
       setSearchStatus('searching');
       let nextIndex = 0;
       let done = false;
@@ -112,7 +112,6 @@ export default function StepResults({ state, dispatch }: Props) {
         }
       }
 
-      // Step 3: Fetch final results
       const resultsRes = await fetch(`/api/results?tripId=${tripId}`);
       const resultsData = await resultsRes.json();
       setResults(resultsData.results || []);
@@ -123,12 +122,10 @@ export default function StepResults({ state, dispatch }: Props) {
     }
   }, [state, dispatch]);
 
-  // Auto-start on mount
   useEffect(() => {
     runSearch();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Rotate tips every 5 seconds
   useEffect(() => {
     if (!isSearching) return;
     const interval = setInterval(() => {
@@ -136,6 +133,33 @@ export default function StepResults({ state, dispatch }: Props) {
     }, 5000);
     return () => clearInterval(interval);
   }, [isSearching]);
+
+  const sendItinerary = async (resultId: string) => {
+    setSendingEmail(resultId);
+    setEmailSent(null);
+    try {
+      const res = await fetch('/api/send-itinerary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resultId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      // Open mailto links for each traveler
+      for (const email of data.emails) {
+        const mailto = `mailto:${email.to}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
+        window.open(mailto, '_blank');
+      }
+
+      setEmailSent(resultId);
+    } catch (err) {
+      alert(`Failed to prepare emails: ${(err as Error).message}`);
+    } finally {
+      setSendingEmail(null);
+    }
+  };
 
   const percentage = progressInfo.total > 0
     ? Math.round((progressInfo.completed / progressInfo.total) * 100)
@@ -171,7 +195,6 @@ export default function StepResults({ state, dispatch }: Props) {
     return (
       <div className="space-y-6">
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
-          {/* Animated spinner */}
           <div className="relative w-20 h-20 mx-auto mb-5">
             <div className="absolute inset-0 rounded-full border-4 border-gray-200 dark:border-gray-700" />
             <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
@@ -184,12 +207,10 @@ export default function StepResults({ state, dispatch }: Props) {
             {searchStatus === 'creating' ? 'Setting up your search...' : 'Searching for the best deals...'}
           </h2>
 
-          {/* Elapsed timer */}
           <div className="text-3xl font-mono font-bold text-blue-600 dark:text-blue-400 my-3">
             {elapsedTime}
           </div>
 
-          {/* Progress bar */}
           {progressInfo.total > 0 && (
             <div className="w-full max-w-md mx-auto">
               <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-3">
@@ -199,29 +220,24 @@ export default function StepResults({ state, dispatch }: Props) {
                 />
               </div>
               <div className="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>
-                  {progressInfo.completed} of {progressInfo.total} scenarios
-                </span>
+                <span>{progressInfo.completed} of {progressInfo.total} scenarios</span>
                 <span>{percentage}%</span>
               </div>
             </div>
           )}
 
-          {/* Current task */}
           {progressInfo.currentTask && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
               Just checked: {progressInfo.currentTask}
             </p>
           )}
 
-          {/* Rotating tips */}
           {searchStatus === 'searching' && (
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-4 italic transition-opacity duration-500">
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-4 italic">
               {SEARCH_TIPS[tipIndex]}
             </p>
           )}
 
-          {/* Estimate */}
           {progressInfo.total === 0 && searchStatus === 'searching' && (
             <p className="text-xs text-gray-400 dark:text-gray-600 mt-4">
               Estimated time: ~{estMins} minute{estMins !== 1 ? 's' : ''} for {totalScenarios} scenario{totalScenarios !== 1 ? 's' : ''}
@@ -235,9 +251,7 @@ export default function StepResults({ state, dispatch }: Props) {
   if (results.length === 0) {
     return (
       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 text-center">
-        <p className="text-yellow-700 dark:text-yellow-400">
-          No results found. Try different cities or dates.
-        </p>
+        <p className="text-yellow-700 dark:text-yellow-400">No results found. Try different cities or dates.</p>
       </div>
     );
   }
@@ -251,7 +265,7 @@ export default function StepResults({ state, dispatch }: Props) {
           Results — Cheapest Options
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Ranked by total cost (flights + hotel) for all {state.travelers.length} travelers.
+          Ranked by total cost (flights + hotel) for all {state.travelers.length} travelers. Click flights or hotels to book.
         </p>
       </div>
 
@@ -299,25 +313,51 @@ export default function StepResults({ state, dispatch }: Props) {
             {expandedRow === i && result.flight_quotes && (
               <div className="border-t border-gray-100 dark:border-gray-800 px-5 py-4 bg-gray-50 dark:bg-gray-800/50">
                 <div className="grid gap-3">
+                  {/* Hotel with booking link */}
                   {result.hotel_name && (
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Hotel: {result.hotel_name} — {formatCurrency(result.hotel_cost_per_night)}/night
+                    <div className="text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Hotel: </span>
+                      {result.hotel_booking_url ? (
+                        <a
+                          href={result.hotel_booking_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                        >
+                          {result.hotel_name} — {formatCurrency(result.hotel_cost_per_night)}/night ↗
+                        </a>
+                      ) : (
+                        <span className="text-gray-900 dark:text-white">
+                          {result.hotel_name} — {formatCurrency(result.hotel_cost_per_night)}/night
+                        </span>
+                      )}
                     </div>
                   )}
+
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-1">
                     Flight Breakdown:
                   </div>
+
                   {result.flight_quotes.map((fq, j) => (
-                    <div
-                      key={j}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {fq.traveler_name || 'Traveler'}: {fq.departure_airport} → {fq.arrival_airport}
+                    <div key={j} className="flex items-center justify-between text-sm">
+                      <div className="text-gray-700 dark:text-gray-300">
+                        <span>{fq.traveler_name || 'Traveler'}: </span>
+                        {fq.booking_url && fq.price !== 0 ? (
+                          <a
+                            href={fq.booking_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            {fq.departure_airport} → {fq.arrival_airport} ↗
+                          </a>
+                        ) : (
+                          <span>{fq.departure_airport} → {fq.arrival_airport}</span>
+                        )}
                         {fq.airline && (
                           <span className="text-gray-400 ml-1">({fq.airline})</span>
                         )}
-                      </span>
+                      </div>
                       <span
                         className={`font-medium ${
                           fq.price === 0
@@ -327,12 +367,35 @@ export default function StepResults({ state, dispatch }: Props) {
                             : 'text-gray-900 dark:text-white'
                         }`}
                       >
-                        {fq.price === 0
-                          ? 'Local'
-                          : formatCurrency(fq.price)}
+                        {fq.price === 0 ? 'Local' : formatCurrency(fq.price)}
                       </span>
                     </div>
                   ))}
+
+                  {/* Send Itinerary button */}
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sendItinerary(result.id!);
+                      }}
+                      disabled={sendingEmail === result.id}
+                      className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        emailSent === result.id
+                          ? 'bg-green-600 text-white'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
+                      }`}
+                    >
+                      {sendingEmail === result.id
+                        ? 'Preparing emails...'
+                        : emailSent === result.id
+                        ? 'Email drafts opened!'
+                        : '📧 Send Itinerary to All Participants'}
+                    </button>
+                    <p className="text-xs text-gray-400 mt-1 text-center">
+                      Opens email drafts with booking links for each traveler
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

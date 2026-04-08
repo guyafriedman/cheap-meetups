@@ -1,6 +1,7 @@
 export interface HotelResult {
   pricePerNight: number;
   hotelName: string;
+  bookingUrl: string | null;
 }
 
 export async function fetchHotelPrice(
@@ -46,7 +47,8 @@ export async function fetchHotelPrice(
         ? parseFloat(rate.replace(/[^0-9.]/g, ''))
         : rate;
       if (!isNaN(price) && price > 0) {
-        return { pricePerNight: price, hotelName: prop.name || 'Hotel' };
+        const bookingUrl = prop.link || `https://www.google.com/travel/hotels/${encodeURIComponent(cityName)}?q=${encodeURIComponent(prop.name || cityName + ' hotels')}&dates=${checkIn}_${checkOut}`;
+        return { pricePerNight: price, hotelName: prop.name || 'Hotel', bookingUrl };
       }
     }
     // Also check total_rate
@@ -56,11 +58,11 @@ export async function fetchHotelPrice(
         ? parseFloat(totalStr.replace(/[^0-9.]/g, ''))
         : totalStr;
       if (!isNaN(total) && total > 0) {
-        // Estimate per-night from total
         const nights = Math.max(1, Math.round(
           (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)
         ));
-        return { pricePerNight: total / nights, hotelName: prop.name || 'Hotel' };
+        const bookingUrl = prop.link || `https://www.google.com/travel/hotels/${encodeURIComponent(cityName)}?q=${encodeURIComponent(prop.name || cityName + ' hotels')}&dates=${checkIn}_${checkOut}`;
+        return { pricePerNight: total / nights, hotelName: prop.name || 'Hotel', bookingUrl };
       }
     }
   }

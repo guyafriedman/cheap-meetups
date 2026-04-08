@@ -2,6 +2,7 @@ export interface Traveler {
   id?: string;
   trip_id?: string;
   name: string;
+  email: string;
   address: string;
   home_airport: string;
 }
@@ -46,6 +47,7 @@ export interface SearchResult {
   check_out: string;
   hotel_cost_per_night: number | null;
   hotel_name?: string | null;
+  hotel_booking_url?: string | null;
   hotel_total: number | null;
   total_flight_cost: number | null;
   total_cost: number | null;
@@ -57,6 +59,7 @@ export interface FlightQuote {
   search_result_id?: string;
   traveler_id?: string;
   traveler_name?: string;
+  traveler_email?: string;
   departure_airport: string;
   arrival_airport: string;
   outbound_date: string;
@@ -64,6 +67,7 @@ export interface FlightQuote {
   price: number | null;
   airline: string | null;
   stops?: number | null;
+  booking_url?: string | null;
 }
 
 export interface SearchProgress {
