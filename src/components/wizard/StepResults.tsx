@@ -147,15 +147,10 @@ export default function StepResults({ state, dispatch }: Props) {
 
       if (!res.ok) throw new Error(data.error);
 
-      // Open mailto links for each traveler
-      for (const email of data.emails) {
-        const mailto = `mailto:${email.to}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
-        window.open(mailto, '_blank');
-      }
-
       setEmailSent(resultId);
+      alert(data.message);
     } catch (err) {
-      alert(`Failed to prepare emails: ${(err as Error).message}`);
+      alert(`Failed to send emails: ${(err as Error).message}`);
     } finally {
       setSendingEmail(null);
     }
@@ -393,7 +388,7 @@ export default function StepResults({ state, dispatch }: Props) {
                         : '📧 Send Itinerary to All Participants'}
                     </button>
                     <p className="text-xs text-gray-400 mt-1 text-center">
-                      Opens email drafts with booking links for each traveler
+                      Sends a personalized email with booking links to each traveler
                     </p>
                   </div>
                 </div>
