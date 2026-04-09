@@ -382,9 +382,9 @@ export default function StepResults({ state, dispatch }: Props) {
                       }`}
                     >
                       {sendingEmail === result.id
-                        ? 'Preparing emails...'
+                        ? 'Sending emails...'
                         : emailSent === result.id
-                        ? 'Email drafts opened!'
+                        ? 'Emails sent!'
                         : '📧 Send Itinerary to All Participants'}
                     </button>
                     <p className="text-xs text-gray-400 mt-1 text-center">
