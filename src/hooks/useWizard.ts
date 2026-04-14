@@ -8,6 +8,9 @@ const initialState: WizardState = {
   travelers: [],
   selectedCities: [],
   minStars: 3,
+  hotelMode: 'stars',
+  hotelBrands: [],
+  downtownOnly: true,
   dateRanges: [],
   freehandText: '',
   tripId: null,
@@ -53,6 +56,19 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     }
     case 'SET_MIN_STARS':
       return { ...state, minStars: action.stars };
+    case 'SET_HOTEL_MODE':
+      return { ...state, hotelMode: action.mode };
+    case 'TOGGLE_HOTEL_BRAND': {
+      const exists = state.hotelBrands.includes(action.brand);
+      return {
+        ...state,
+        hotelBrands: exists
+          ? state.hotelBrands.filter((b) => b !== action.brand)
+          : [...state.hotelBrands, action.brand],
+      };
+    }
+    case 'SET_DOWNTOWN_ONLY':
+      return { ...state, downtownOnly: action.downtownOnly };
     case 'SET_DATE_RANGES':
       return { ...state, dateRanges: action.ranges };
     case 'ADD_DATE_RANGE':

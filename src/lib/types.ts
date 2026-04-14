@@ -30,10 +30,15 @@ export interface DateRange {
   source: 'manual' | 'freehand';
 }
 
+export type HotelMode = 'stars' | 'brand';
+
 export interface Trip {
   id?: string;
   name: string;
   min_stars: number;
+  hotel_mode: HotelMode;
+  hotel_brands: string[];
+  downtown_only: boolean;
   status: 'draft' | 'searching' | 'complete' | 'error';
   created_at?: string;
 }
@@ -88,6 +93,9 @@ export interface WizardState {
   travelers: Traveler[];
   selectedCities: City[];
   minStars: number;
+  hotelMode: HotelMode;
+  hotelBrands: string[];
+  downtownOnly: boolean;
   dateRanges: DateRange[];
   freehandText: string;
   tripId: string | null;
@@ -102,6 +110,9 @@ export type WizardAction =
   | { type: 'REMOVE_TRAVELER'; index: number }
   | { type: 'TOGGLE_CITY'; city: City }
   | { type: 'SET_MIN_STARS'; stars: number }
+  | { type: 'SET_HOTEL_MODE'; mode: HotelMode }
+  | { type: 'TOGGLE_HOTEL_BRAND'; brand: string }
+  | { type: 'SET_DOWNTOWN_ONLY'; downtownOnly: boolean }
   | { type: 'SET_DATE_RANGES'; ranges: DateRange[] }
   | { type: 'ADD_DATE_RANGE'; range: DateRange }
   | { type: 'REMOVE_DATE_RANGE'; index: number }

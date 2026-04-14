@@ -4,18 +4,90 @@ export interface HotelResult {
   bookingUrl: string | null;
 }
 
+export interface HotelSearchOptions {
+  cityName: string;
+  checkIn: string;
+  checkOut: string;
+  minStars: number;
+  hotelMode?: 'stars' | 'brand';
+  hotelBrands?: string[];
+  downtownOnly?: boolean;
+}
+
+const BRAND_SEARCH_NAMES: Record<string, string> = {
+  marriott: 'Marriott',
+  hilton: 'Hilton',
+  hyatt: 'Hyatt',
+  ihg: 'IHG Holiday Inn',
+  wyndham: 'Wyndham',
+  'best-western': 'Best Western',
+  accor: 'Accor Novotel',
+  choice: 'Choice Hotels Comfort Inn',
+  radisson: 'Radisson',
+  'four-seasons': 'Four Seasons',
+};
+
 export async function fetchHotelPrice(
   cityName: string,
   checkIn: string,
   checkOut: string,
-  minStars: number
+  minStars: number,
+  hotelMode: string = 'stars',
+  hotelBrands: string[] = [],
+  downtownOnly: boolean = true
 ): Promise<HotelResult | null> {
+  // If brand mode with brands selected, search each brand and return cheapest
+  if (hotelMode === 'brand' && hotelBrands.length > 0) {
+    const results: HotelResult[] = [];
+    for (const brand of hotelBrands) {
+      const result = await fetchSingleHotelSearch({
+        cityName,
+        checkIn,
+        checkOut,
+        minStars: 0, // don't filter by stars in brand mode
+        brandQuery: BRAND_SEARCH_NAMES[brand] || brand,
+        downtownOnly,
+      });
+      if (result) results.push(result);
+    }
+    if (results.length === 0) return null;
+    return results.reduce((cheapest, r) =>
+      r.pricePerNight < cheapest.pricePerNight ? r : cheapest
+    );
+  }
+
+  // Star mode — original behavior
+  return fetchSingleHotelSearch({ cityName, checkIn, checkOut, minStars, downtownOnly });
+}
+
+async function fetchSingleHotelSearch(opts: {
+  cityName: string;
+  checkIn: string;
+  checkOut: string;
+  minStars: number;
+  brandQuery?: string;
+  downtownOnly?: boolean;
+}): Promise<HotelResult | null> {
   const apiKey = process.env.SERPAPI_KEY;
   if (!apiKey) throw new Error('SERPAPI_KEY not configured');
 
+  const { cityName, checkIn, checkOut, minStars, brandQuery, downtownOnly = true } = opts;
+
+  // Build search query
+  let query: string;
+  if (brandQuery) {
+    query = downtownOnly
+      ? `${brandQuery} hotel ${cityName} downtown`
+      : `${brandQuery} hotel ${cityName}`;
+  } else {
+    query = downtownOnly
+      ? `${cityName} downtown hotels`
+      : `${cityName} hotels`;
+  }
+
   const params = new URLSearchParams({
     engine: 'google_hotels',
-    q: `${cityName} downtown hotels`,
+    q: query,
     check_in_date: checkIn,
     check_out_date: checkOut,
     currency: 'USD',

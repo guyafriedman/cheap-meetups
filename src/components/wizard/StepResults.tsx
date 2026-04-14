@@ -69,6 +69,9 @@ export default function StepResults({ state, dispatch }: Props) {
           travelers: state.travelers,
           cities: state.selectedCities,
           minStars: state.minStars,
+          hotelMode: state.hotelMode,
+          hotelBrands: state.hotelBrands,
+          downtownOnly: state.downtownOnly,
           dateRanges: state.dateRanges,
         }),
       });

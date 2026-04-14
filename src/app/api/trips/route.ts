@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     );
 
     const body = await request.json();
-    const { travelers, cities, minStars, dateRanges } = body;
+    const { travelers, cities, minStars, hotelMode, hotelBrands, downtownOnly, dateRanges } = body;
 
     if (!travelers?.length || !cities?.length || !dateRanges?.length) {
       return NextResponse.json(
@@ -21,7 +21,14 @@ export async function POST(request: Request) {
     // Create trip
     const { data: trip, error: tripError } = await supabase
       .from('trips')
-      .insert({ name: 'Untitled Trip', min_stars: minStars || 3, status: 'draft' })
+      .insert({
+        name: 'Untitled Trip',
+        min_stars: minStars || 3,
+        hotel_mode: hotelMode || 'stars',
+        hotel_brands: hotelBrands || [],
+        downtown_only: downtownOnly ?? true,
+        status: 'draft',
+      })
       .select('id')
       .single();
 

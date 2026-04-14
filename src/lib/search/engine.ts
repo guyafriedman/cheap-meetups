@@ -33,7 +33,7 @@ export async function orchestrateSearch(tripId: string) {
     // Load trip data
     const { data: trip } = await supabase
       .from('trips')
-      .select('min_stars')
+      .select('min_stars, hotel_mode, hotel_brands, downtown_only')
       .eq('id', tripId)
       .single();
 
@@ -96,7 +96,10 @@ export async function orchestrateSearch(tripId: string) {
         city.city_name,
         dateRange.check_in,
         dateRange.check_out,
-        trip.min_stars
+        trip.min_stars,
+        trip.hotel_mode || 'stars',
+        trip.hotel_brands || [],
+        trip.downtown_only ?? true
       );
 
       const nights = nightsBetween(dateRange.check_in, dateRange.check_out);
