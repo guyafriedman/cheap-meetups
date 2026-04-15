@@ -38,11 +38,10 @@ export async function POST(request: Request) {
 
     // Insert travelers
     const { error: tError } = await supabase.from('travelers').insert(
-      travelers.map((t: { name: string; email: string; address: string; home_airport: string }) => ({
+      travelers.map((t: { name: string; email: string; home_airport: string }) => ({
         trip_id: tripId,
         name: t.name,
         email: t.email || '',
-        address: t.address || '',
         home_airport: t.home_airport,
       }))
     );

@@ -3,7 +3,6 @@ import { Traveler } from '../types';
 
 const NAME_HEADERS = ['name', 'full name', 'traveler', 'person', 'participant'];
 const EMAIL_HEADERS = ['email', 'e-mail', 'email address', 'mail'];
-const ADDRESS_HEADERS = ['address', 'home address', 'location', 'city', 'home city'];
 const AIRPORT_HEADERS = ['airport', 'home airport', 'home_airport', 'iata', 'airport code', 'code'];
 
 function matchHeader(header: string, candidates: string[]): boolean {
@@ -34,7 +33,6 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
         const headers = Object.keys(rows[0]);
         const nameCol = headers.find(h => matchHeader(h, NAME_HEADERS));
         const emailCol = headers.find(h => matchHeader(h, EMAIL_HEADERS));
-        const addressCol = headers.find(h => matchHeader(h, ADDRESS_HEADERS));
         const airportCol = headers.find(h => matchHeader(h, AIRPORT_HEADERS));
 
         if (!nameCol) {
@@ -53,7 +51,6 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
           const row = rows[i];
           const name = String(row[nameCol] || '').trim();
           const email = emailCol ? String(row[emailCol] || '').trim() : '';
-          const address = addressCol ? String(row[addressCol] || '').trim() : '';
           const airport = String(row[airportCol] || '').trim().toUpperCase();
 
           if (!name) {
@@ -65,7 +62,7 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
             warnings.push(`Row ${i + 2}: "${airport}" doesn't look like a valid IATA code for ${name}`);
           }
 
-          travelers.push({ name, email, address, home_airport: airport });
+          travelers.push({ name, email, home_airport: airport });
         }
 
         resolve({ travelers, warnings });

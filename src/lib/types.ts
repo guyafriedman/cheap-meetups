@@ -3,7 +3,6 @@ export interface Traveler {
   trip_id?: string;
   name: string;
   email: string;
-  address: string;
   home_airport: string;
 }
 

@@ -44,7 +44,7 @@ export default function StepUpload({ state, dispatch }: Props) {
   const addEmptyTraveler = () => {
     dispatch({
       type: 'ADD_TRAVELER',
-      traveler: { name: '', email: '', address: '', home_airport: '' },
+      traveler: { name: '', email: '', home_airport: '' },
     });
   };
 
@@ -60,7 +60,7 @@ export default function StepUpload({ state, dispatch }: Props) {
           Upload Travelers
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Upload a CSV or Excel file with columns: Name, Email, Address, Airport (IATA code).
+          Upload a CSV or Excel file with columns: Name, Email, Airport (IATA code).
           Or add travelers manually below.
         </p>
       </div>
