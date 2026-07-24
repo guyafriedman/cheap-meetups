@@ -13,9 +13,12 @@ export async function parseFreehandDates(text: string): Promise<ParsedDateRange[
   const client = new Anthropic({ apiKey });
   const today = new Date().toISOString().split('T')[0];
 
+
+  
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+ model: 'claude-sonnet-5',
     max_tokens: 4096,
+    thinking: { type: 'disabled' },
     system: `You are a date range parser. Given freehand text describing travel date preferences, output a JSON array of date ranges.
 
 Each element must have: { "check_in": "YYYY-MM-DD", "check_out": "YYYY-MM-DD", "label": "human description" }
